@@ -3,6 +3,8 @@ package com.wjy.lwbi.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.wjy.lwbi.model.entity.User;
 
+import java.util.List;
+
 /**
 * @author littlew
 * @description 针对表【user(用户)】的数据库操作Mapper
@@ -10,7 +12,7 @@ import com.wjy.lwbi.model.entity.User;
 * @Entity com.yupi.springbootinit.model.entity.User
 */
 public interface UserMapper extends BaseMapper<User> {
-
+    List<String> getPermsById(Long id);
 }
 
 

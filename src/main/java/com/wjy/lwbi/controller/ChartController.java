@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -161,6 +162,7 @@ public class ChartController {
      * @return
      */
     @PostMapping("/list/page")
+    @PreAuthorize("hasAnyAuthority('system:mylist:list')")
     public BaseResponse<Page<Chart>> listChartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
                                                      HttpServletRequest request) {
         long current = chartQueryRequest.getCurrent();
@@ -180,6 +182,7 @@ public class ChartController {
      * @return
      */
     @PostMapping("/my/list/page")
+    @PreAuthorize("hasAnyAuthority('system:mylist:list')")
     public BaseResponse<Page<Chart>> listMyChartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
                                                        HttpServletRequest request) {
         if (chartQueryRequest == null) {
@@ -234,6 +237,7 @@ public class ChartController {
      * @return
      */
     @PostMapping("/gen")
+    @PreAuthorize("hasAnyAuthority('system:analysis:list')")
     public BaseResponse<BiResponse> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
                                                  GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
         String name = genChartByAiRequest.getName();
@@ -329,60 +333,10 @@ public class ChartController {
      * @return
      */
     @PostMapping("/gen/mq")
+    @PreAuthorize("hasAnyAuthority('system:analysis:list')")
     public BaseResponse<BiResponse> genChartByAiMq(@RequestPart("file") MultipartFile multipartFile,
                                                  GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
-        String name = genChartByAiRequest.getName();
-        String goal = genChartByAiRequest.getGoal();
-        String chartType = genChartByAiRequest.getChartType();
-        //校验
-        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
-        ThrowUtils.throwIf(StringUtils.isBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称为空或过长");
-        //用户信息
-        User loginUser = userService.getLoginUser(request);
-        //校验文件
-        long size = multipartFile.getSize();
-        String originalFilename = multipartFile.getOriginalFilename();
-        //1. 校验文件大小
-        final long ONE_MB = 1024 * 1024L;
-        ThrowUtils.throwIf(size > ONE_MB, ErrorCode.PARAMS_ERROR, "文件超过1M");
-        //2. 校验文件名后缀
-        String suffix = FileUtil.getSuffix(originalFilename);
-        List<String> suffixes = Arrays.asList("xlsx", "xls");
-        ThrowUtils.throwIf(!suffixes.contains(suffix), ErrorCode.PARAMS_ERROR, "上传文件类型错误，请重新上传");
-        //限流
-        redissonManager.doRateLimit("genChartByAi_" + loginUser.getId());
-        StringBuilder userInput = new StringBuilder();
-        //用户数据拼接（按照格式）
-        userInput.append("分析需求").append("\n");
-        String userGoal = goal;
-        if (StringUtils.isNoneBlank(chartType)) {
-            userGoal += "，请使用" + chartType;
-        }
-        userInput.append(userGoal).append("\n");
-        userInput.append("原始数据：").append("\n");
-        String result = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append(result);
-
-        //执行AI调用之前，先把信息保存在数据库中
-        Chart chart = new Chart();
-        chart.setGoal(goal);
-        chart.setName(name);
-        chart.setChartData(result);
-        chart.setChartType(chartType);
-        chart.setUserId(loginUser.getId());
-        chart.setStatus("wait");
-        boolean saveResult = chartService.save(chart);
-        ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表信息保存失败");
-
-        //调用ai接口
-        long biModelId = CommonConstant.BI_MODEL_ID;
-        //这里发送消息到RabbitMQ中
-        Long newChartId = chart.getId();
-        String message = String.valueOf(newChartId);
-        biMessageProducer.sendMessage(message);
-
-        BiResponse biResponse = new BiResponse();
-        biResponse.setChartId(newChartId);
+        BiResponse biResponse = chartService.genChartByAiMq(multipartFile, genChartByAiRequest, request);
         return ResultUtils.success(biResponse);
     }
 
