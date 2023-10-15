@@ -3,11 +3,13 @@ package com.wjy.lwbi.filter;
 import com.alibaba.fastjson.JSON;
 import com.wjy.lwbi.common.ErrorCode;
 import com.wjy.lwbi.exception.BusinessException;
+import com.wjy.lwbi.exception.SelfAuthenticationException;
 import com.wjy.lwbi.exception.SelfSecurityException;
 import com.wjy.lwbi.model.domain.LoginUser;
 import com.wjy.lwbi.utils.JwtUtil;
 import io.jsonwebtoken.Claims;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +23,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -47,14 +50,14 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
             Claims claims = JwtUtil.parseJWT(token);
             userId = claims.getSubject();
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new SelfSecurityException(ErrorCode.SYSTEM_ERROR.getCode(), "token解析异常"); //这里全局处理器统一回复系统错误
+//            e.printStackTrace();
+            throw new SelfAuthenticationException(ErrorCode.SYSTEM_ERROR.getCode(), "token解析异常");
         }
         //根据userId从redis中查询用户信息
         Object o = redisTemplate.opsForValue().get("login:" + userId);
         LoginUser loginUser = JSON.parseObject(JSON.toJSONString(o), LoginUser.class);
         if(Objects.isNull(loginUser)) {
-            throw new SelfSecurityException(ErrorCode.SYSTEM_ERROR.getCode(), "用户查询异常");
+            throw new SelfAuthenticationException(ErrorCode.SYSTEM_ERROR.getCode(), "用户查询异常");
         }
         //将用户信息、权限信息存入SecurityContextHolder中
         UsernamePasswordAuthenticationToken authenticationToken
