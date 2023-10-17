@@ -53,6 +53,8 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         ThrowUtils.throwIf(StringUtils.isBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称为空或过长");
         //用户信息
         User loginUser = userService.getLoginUser(request);
+        //限流
+        redissonManager.doRateLimit("genChartByAi_" + loginUser.getId());
         //校验文件
         long size = multipartFile.getSize();
         String originalFilename = multipartFile.getOriginalFilename();
@@ -63,20 +65,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         String suffix = FileUtil.getSuffix(originalFilename);
         List<String> suffixes = Arrays.asList("xlsx", "xls");
         ThrowUtils.throwIf(!suffixes.contains(suffix), ErrorCode.PARAMS_ERROR, "上传文件类型错误，请重新上传");
-        //限流
-        redissonManager.doRateLimit("genChartByAi_" + loginUser.getId());
-        StringBuilder userInput = new StringBuilder();
-        //用户数据拼接（按照格式）
-        userInput.append("分析需求").append("\n");
-        String userGoal = goal;
-        if (StringUtils.isNoneBlank(chartType)) {
-            userGoal += "，请使用" + chartType;
-        }
-        userInput.append(userGoal).append("\n");
-        userInput.append("原始数据：").append("\n");
         String result = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append(result);
-
         //执行AI调用之前，先把信息保存在数据库中
         Chart chart = new Chart();
         chart.setGoal(goal);
@@ -87,7 +76,6 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         chart.setStatus("wait");
         boolean saveResult = this.save(chart);
         ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表信息保存失败");
-
         //调用ai接口
         long biModelId = CommonConstant.BI_MODEL_ID;
         //这里发送消息到RabbitMQ中
