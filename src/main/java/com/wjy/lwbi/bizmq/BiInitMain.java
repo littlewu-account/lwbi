@@ -22,7 +22,7 @@ public class BiInitMain {
             Connection connection = factory.newConnection();
             Channel channel = connection.createChannel();
             String EXCHANGE_NAME = BiMqConstant.BI_EXCHANGE_NAME;
-            channel.exchangeDeclare(EXCHANGE_NAME, "direct");
+            channel.exchangeDeclare(EXCHANGE_NAME, "direct", true);
 
             //创建队列
             String queueName = BiMqConstant.BI_QUEUE_NAME;

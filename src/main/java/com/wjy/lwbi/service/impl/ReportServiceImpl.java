@@ -92,6 +92,7 @@ public class ReportServiceImpl extends ServiceImpl<ReportMapper, Report> impleme
                 reportContentStringBuilder.append(p.getText());
                 reportContentStringBuilder.append("\n");
             });
+            inputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
             throw new BusinessException(ErrorCode.SYSTEM_ERROR.getCode(), "文件读取错误");
@@ -103,7 +104,7 @@ public class ReportServiceImpl extends ServiceImpl<ReportMapper, Report> impleme
         String reviseRequest = stringBuilder.toString();
 
         //调用AI接口，生成修改建议
-        String reviseResponse = reportAiManager.doChat(CommonConstant.Report_MODEL_ID, reviseRequest);
+        String reviseResponse = reportAiManager.doChat(CommonConstant.REPORT_MODEL_ID, reviseRequest);
 
         //创建Report对象，存入数据库
         Report report = new Report();
@@ -123,6 +124,7 @@ public class ReportServiceImpl extends ServiceImpl<ReportMapper, Report> impleme
         ReportAdviceResponse reportAdviceResponse = new ReportAdviceResponse();
         reportAdviceResponse.setReportId(report.getId());
         reportAdviceResponse.setGenResult(reviseResponse);
+        reportAdviceResponse.setReportData(reportContent);
         return reportAdviceResponse;
     }
 }

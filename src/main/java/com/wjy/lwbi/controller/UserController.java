@@ -91,6 +91,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/logout")
+    @PreAuthorize("hasAnyAuthority('system:user:list')")
     public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
         if (request == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);

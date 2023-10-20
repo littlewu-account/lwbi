@@ -7,12 +7,10 @@ import lombok.Data;
  * @version 1.0
  */
 @Data
-public class ReportAdviceResponse {
+public class WriteResponse {
 
-    private Long reportId;
+    private long writeId;
 
     private String genResult;
-
-    private String reportData;
 
 }

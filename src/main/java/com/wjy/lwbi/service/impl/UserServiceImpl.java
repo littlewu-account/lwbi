@@ -184,11 +184,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean userLogout(HttpServletRequest request) {
-        if (request.getSession().getAttribute(USER_LOGIN_STATE) == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
-        }
-        // 移除登录态
-        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        //先移除redis中的用户信息
+        UsernamePasswordAuthenticationToken authentication
+                = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext()
+                .getAuthentication();
+        LoginUser loginUser = (LoginUser) authentication.getPrincipal();
+        User user = loginUser.getUser();
+        Long id = user.getId();
+        redisTemplate.delete("login:" + id);
         return true;
     }
 

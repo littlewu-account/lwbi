@@ -24,6 +24,11 @@ public interface CommonConstant {
     /**
      * AIModelId for 报告修改
      */
-    long Report_MODEL_ID = 1713853365462913025L;
+    long REPORT_MODEL_ID = 1713853365462913025L;
+
+    /**
+     * AIModelId for 文案攥写
+     */
+    long WRITE_MODEL_ID = 1714972799262937089L;
 
 }
